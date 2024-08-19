@@ -8,7 +8,7 @@ Endereco.init({
         primaryKey: true,
         autoIncrement: true
     },
-    CEP: {
+    Cep: {
         type: DataTypes.STRING,
         allowNull: false,
     },
