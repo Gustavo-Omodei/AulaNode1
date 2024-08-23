@@ -1,5 +1,7 @@
 const { json } = require('sequelize');
 const {Endereco} = require('../Models');
+const axios = require('axios');
+
 
 exports.createEndereco = async (req, res) => {
     try{
@@ -85,43 +87,44 @@ exports.deleteEndereco = async (req, res) => {
     }
 };
 
-const buscarESalvarEndereco = async (req, res) => {
+
+exports.buscarESalvarEndereco = async (req, res) => {
     const { cep } = req.params;
-  
+
     try {
-      // Fazer a solicitação à API ViaCEP
-      const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
-      
-      const { data } = response;
-  
-      if (data.erro) {
-        return res.status(404).json({ error: 'CEP não encontrado' });
-      }
-  
-      // Desestruturar os dados recebidos
-      const { logradouro, bairro, localidade: cidade, uf: estado } = data;
-  
-      // Criar ou atualizar o endereço no banco de dados
-      const [endereco, created] = await Endereco.upsert({
-        cep,
-        logradouro,
-        bairro,
-        cidade,
-        estado
-      });
-  
-      // Responder ao cliente
-      if (created) {
-        res.status(201).json({ message: 'Endereço criado com sucesso', endereco });
-      } else {
-        res.status(200).json({ message: 'Endereço atualizado com sucesso', endereco });
-      }
+        // Fazer a solicitação à API ViaCEP
+        const response = await axios.get(`https://viacep.com.br/ws/${cep}/json/`);
+        
+        const { data } = response;
+
+        if (data.erro) {
+            return res.status(404).json({ error: 'CEP não encontrado' });
+        }
+
+        // Desestruturar os dados recebidos
+        const { logradouro, bairro, localidade: cidade, uf: estado, complemento = '', ibge: municipioIBGE } = data;
+
+        // Criar ou atualizar o endereço no banco de dados
+        const [endereco, created] = await Endereco.upsert({
+            Cep: cep,
+            Logradouro: logradouro,
+            Numero: 0, // Pode ser definido mais tarde ou deixado como padrão
+            Complemento: complemento,
+            Bairro: bairro,
+            Cidade: cidade,
+            Estado: estado,
+            MunicipioIBGE: municipioIBGE
+        }, {
+            returning: true // Retorna o objeto atualizado
+        });
+
+        // Responder ao cliente
+        res.status(200).json({
+            message: created ? 'Endereço criado com sucesso' : 'Endereço atualizado com sucesso',
+            endereco
+        });
     } catch (error) {
-      console.error(error);
-      res.status(500).json({ error: 'Erro ao buscar o endereço' });
+        console.error(error);
+        res.status(500).json({ error: 'Erro ao buscar ou salvar o endereço', details: error.message });
     }
-  };
-  
-  module.exports = {
-    buscarESalvarEndereco
-  };
+};

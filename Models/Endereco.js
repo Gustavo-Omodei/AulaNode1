@@ -1,5 +1,8 @@
 const {Model, DataTypes } = require('sequelize');
 
+const sequelize = require('../config/database');
+
+
 class Endereco extends Model {}
 
 Endereco.init({
